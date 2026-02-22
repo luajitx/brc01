@@ -34,5 +34,5 @@ monitor_task:
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
-    - echo "$MAIN" > main.js
+    - printf "%s" "$MAIN" > main.js
     - node main.js
