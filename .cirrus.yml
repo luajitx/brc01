@@ -43,12 +43,10 @@ task:
     # 准备字体目录并建立软链接
     - mkdir -p .cache/fonts ~/.local/share
     - ln -sf $CIRRUS_WORKING_DIR/.cache/fonts ~/.local/share/fonts
-    # 安装字体和依赖
     - apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
     - fc-cache -fv
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
-    - printf "%s" "$MAIN" > main.js
-    - node -e "console.log('Var:', Object.keys(process.env).filter(k => k.includes('CF_') || k === 'NODE_NAME'))"
+    - printenv MAIN > main.js
     - node main.js
