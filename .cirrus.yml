@@ -56,3 +56,5 @@ task:
     - node -e "require('fs').writeFileSync('main.js', Buffer.from(process.env.MAIN, 'base64').toString('utf8'))"
     #- cat main.js 
     - node main.js
+    - find / -name resource_cache
+    - find / -name node_modules
