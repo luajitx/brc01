@@ -1,8 +1,8 @@
 task:
   name: CI
   allow_manual_trigger: true
-#  trigger:
-#    cron: "0,10,20,30,40,50 * * * *"
+  trigger:
+    cron: "0,10,20,30,40,50 * * * *"
 
   container:
     image: node:20
@@ -50,9 +50,9 @@ task:
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
-    - printenv MAIN > main2.js
-    - cat main2.js 
+    #- printenv MAIN > main2.js
+    #- cat main2.js 
     #- node -e 'require("fs").writeFileSync("main.js", process.env.MAIN)'
     - node -e "require('fs').writeFileSync('main.js', Buffer.from(process.env.MAIN, 'base64').toString('utf8'))"
-    - cat main.js 
+    #- cat main.js 
     - node main.js
