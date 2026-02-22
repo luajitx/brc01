@@ -36,7 +36,7 @@ task:
     folders:
       - .cache
       - node_modules
-      - resource_cache
+#      - resource_cache
 #      - release_tracking_cache
     fingerprint_key: v2-all-cache
     reupload_on_changes: true
