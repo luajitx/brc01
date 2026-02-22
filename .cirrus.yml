@@ -14,7 +14,9 @@ task:
     PUPPETEER_CACHE_DIR: $CIRRUS_WORKING_DIR/.cache/puppeteer
     CF_API_URL: "ENCRYPTED[1f275076ca9517c74bb796d31b213a919f4872c0d13495c7bf3282882b0c0231b155dc464fdf55a062c1b2a8dea276d8]"
     #ENCRYPTED[!3bab141ad9bcf5143bb1bf072f0945bcd9032c0c4877feac224bb08504d42ae06f95719f6bae32f619f7866b93c79bf0!]
-    MAIN: "ENCRYPTED[08f9bd7be7b1011913dedfdd3bd56e8ee7a6558a2acf0fae4af12eba3ae7fb36aafc2bbd9d33b059f6958dd3c2ad3df0]"
+    MAIN: "ENCRYPTED[0754a2039228f49879374e6a2822d154afdd98cd355079e43519072d79e78a5c36f8e8c255ed700ed2b5d8061d8745df]"
+    #"ENCRYPTED[0754a2039228f49879374e6a2822d154afdd98cd355079e43519072d79e78a5c36f8e8c255ed700ed2b5d8061d8745df]" #base64
+    #"ENCRYPTED[08f9bd7be7b1011913dedfdd3bd56e8ee7a6558a2acf0fae4af12eba3ae7fb36aafc2bbd9d33b059f6958dd3c2ad3df0]"
     #"ENCRYPTED[e0b88d769b5b7780a74510f7db23e569c94e53940aaa584e5224117c81be53c8f85235a7741342f587446bcead44bd32]"
     #"ENCRYPTED[3a92dc7bc874a083f289e69373f0ab110e692d5f8b9bf4fc7197b1028906e7d20647f94e79c7c0bac3833f45c9f322d5]"
     #"ENCRYPTED[6eb082298c150290e3465967f30cff7d596a7f3354379f817e5d27341d5e97d5d861d6ee38612c43fd74e96becdd2d7d]"
@@ -50,6 +52,7 @@ task:
   run_script:
     - printenv MAIN > main2.js
     - cat main2.js 
-    - node -e 'require("fs").writeFileSync("main.js", process.env.MAIN)'
+    #- node -e 'require("fs").writeFileSync("main.js", process.env.MAIN)'
+    - node -e "require('fs').writeFileSync('main.js', Buffer.from(process.env.MAIN, 'base64').toString('utf8'))"
     - cat main.js 
     - node main.js
