@@ -1,121 +1,46 @@
-# Cirrus CI配置文件，对应原GitHub Actions的CI逻辑
-# 任务基础配置（Cirrus CI新版语法，统一包裹在task下）
-task:
-  name: CI
-  # 1. 修复定时任务配置（对应原GitHub Actions的schedule）
-  # Cirrus CI的定时触发需配置在trigger.cron下，时区默认UTC（和GitHub一致）
-#  trigger:
-#    cron: "0,10,20,30,40,50 * * * *"
-  # 2. 启用手动触发（对应原workflow_dispatch，新版Cirrus推荐写法）
-  allow_manual_trigger: true
+container:
+  image: node:20 # 建议使用包含浏览器的镜像，如 buildkite/puppeteer
 
-  # 使用Ubuntu最新版容器（对应原ubuntu-latest）
-  container:
-    image: ubuntu:latest
+monitor_task:
+  # 定时任务建议在 Cirrus CI 控制台 "Scheduled Tasks" 中配置
+  
+  container: # 也可以用 container: 、arm_container 来指定
+    image: node:20
     cpu: 1
     memory: 2G
 
-  # 环境变量配置（需要在Cirrus项目设置中添加这些secrets）
+  # 环境变量 (Secrets 需要在 Cirrus 控制台加密后替换)
   env:
     CF_API_URL: ENCRYPTED[!3bab141ad9bcf5143bb1bf072f0945bcd9032c0c4877feac224bb08504d42ae06f95719f6bae32f619f7866b93c79bf0!]
-#    CF_API_KEY: "${CF_API_KEY}"
-#    NODE_NAME: "${NODE_NAME}"
+#    CF_API_KEY: ENCRYPTED[xxx]
+#    NODE_NAME: ENCRYPTED[xxx]
     MAIN: ENCRYPTED[!12336b1e63fb0f496c6fe7afc6fee12e2fba0c28c4e3017d4eb8caa0103dcb8c6cca94b95389328b2d95df02f394ee00!]
-    #RELEASE: "${RELEASE}"
-#    GITHUB_TOKEN: "${GITHUB_TOKEN}" # 用于拉取/写入代码库
-    # 新增：配置仓库信息（替换为你的实际仓库地址和分支）
-#    REPO_URL: "https://github.com/你的用户名/你的仓库名.git"
-#    REPO_BRANCH: "main"
+#    RELEASE: ENCRYPTED[xxx]
+#    CIRRUS_TOKEN: ENCRYPTED[xxx] # 对应 GITHUB_TOKEN
 
-  # 3. 新增：拉取代码仓库（对应GitHub Actions的actions/checkout@v4）
-  # 这是解决package.json不存在的核心步骤
-  checkout_script:
-    - apt-get update -qq && apt-get install -y git --no-install-recommends
-    # 拉取仓库代码（私有仓库需用GITHUB_TOKEN认证）
-#    - git clone --depth 1 -b "${REPO_BRANCH}" "${REPO_URL//https:\/\//https:\/\/${GITHUB_TOKEN}@}" .
-    # 验证代码拉取结果（可选，便于调试）
-    - echo "当前目录文件列表：" && ls -la
-
-  # 缓存配置（对应原actions/cache，调整顺序+增加容错）
-  # 缓存1：Node依赖缓存（修复package.json不存在的容错）
-  node_deps_cache:
+  # 缓存程序与字体
+  node_modules_cache:
     folder: node_modules
-    # 容错处理：如果package.json不存在，用固定字符串避免脚本失败
-    fingerprint_script: |
-      if [ -f package.json ]; then
-        cat package.json
-      else
-        echo "no-package-json"
-      fi
-    populate_script: npm install || echo "无package.json，跳过npm install"
+    fingerprint_script: cat package.json
+    reupload_on_changes: true
 
-  # 缓存2：Puppeteer缓存（补充容错）
   puppeteer_cache:
-    folder: ~/.cache/puppeteer
-    populate_script: mkdir -p ~/.cache/puppeteer || true
-
-  # 缓存3：字体缓存
-  fonts_cache:
-    folder: ~/.local/share/fonts
-    populate_script: mkdir -p ~/.local/share/fonts || true
-
-  # 缓存4：发布跟踪缓存（补充容错）
-  release_cache:
-    folder: release_tracking_cache
-    fingerprint_script: |
-      if [ -f package.json ]; then
-        cat package.json
-      else
-        echo "no-package-json"
-      fi
-
-  # 缓存5：资源缓存（按分钟级时间戳，近似原run_id逻辑）
+    folders: 
+      - ~/.cache/puppeteer
+      - ~/.local/share/fonts
+      - release_tracking_cache
+    fingerprint_key: v6-${CIRRUS_OS}
+    
   resource_cache:
     folder: resource_cache
-    fingerprint_script: date +%Y%m%d%H%M
+    fingerprint_key: res-${CIRRUS_BUILD_ID} # 模拟 run_id
 
-  # 安装系统依赖（字体/工具类，调整顺序确保先安装）
-  apt_packages:
-    - fonts-wqy-microhei
-    - fonts-noto-cjk
-    - fontconfig
-    - curl
-    - gnupg
-#    - git # 补充git依赖（用于checkout）
+  install_script:
+    - mkdir -p ~/.local/share/fonts
+    - apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
+    - fc-cache -fv
+    - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
-  # 安装Node.js 20（调整到checkout后，确保环境正确）
-  install_node_script:
-    - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    - apt-get install -y nodejs --no-install-recommends
-    - node --version
-    - npm --version
-
-  # 安装字体（补充容错，确保缓存逻辑生效）
-  install_fonts_script:
-    - if [ ! -f ~/.local/share/fonts/wqy-microhei.ttc ]; then
-        cp -r /usr/share/fonts/truetype/wqy/* ~/.local/share/fonts/ 2>/dev/null || true;
-        cp -r /usr/share/fonts/opentype/noto/* ~/.local/share/fonts/ 2>/dev/null || true;
-      fi
-    - fc-cache -fv || true
-
-  # 运行核心脚本（修复语法+增加容错）
   run_script:
-    # 安装Node依赖（增加容错，避免包安装失败中断任务）
-    - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra || echo "部分依赖安装失败，继续执行"
-    # 写入并运行main.js（增加MAIN变量非空判断）
-    - if [ -n "$MAIN" ]; then
-        echo "$MAIN" > main.js;
-        node main.js || echo "main.js运行出错，继续执行";
-      else
-        echo "MAIN变量为空，跳过main.js运行";
-      fi
-    # 恢复release.js运行逻辑（增加容错）
-#    - if [ -n "$RELEASE" ]; then
-#        echo "$RELEASE" > release.js;
-#        node release.js || echo "release.js运行出错，任务结束";
-#      else
-#        echo "RELEASE变量为空，跳过release.js运行";
-#      fi
-
-  # 权限说明：需在Cirrus项目设置中启用 "Write access to repository"
-  # 并确保GITHUB_TOKEN拥有repo/contents:write权限
+    - echo "$MAIN" > main.js
+    - node main.js
