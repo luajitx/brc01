@@ -2,10 +2,9 @@ container:
   image: node:20
 
 monitor_task:
-  # 注意：定时任务请在 Cirrus CI 网页端 "Scheduled Tasks" 中配置，名称对应 "monitor"
-  
-  # 环境变量：请在 Cirrus 控制台将 Secrets 加密后替换 ENCRYPTED[...]
   env:
+    # 强制 Puppeteer 缓存到当前目录
+    PUPPETEER_CACHE_DIR: $CIRRUS_WORKING_DIR/.cache/puppeteer
     CF_API_URL: ENCRYPTED[!3bab141ad9bcf5143bb1bf072f0945bcd9032c0c4877feac224bb08504d42ae06f95719f6bae32f619f7866b93c79bf0!]
 #    CF_API_KEY: ENCRYPTED[xxx]
 #    NODE_NAME: ENCRYPTED[xxx]
@@ -13,31 +12,23 @@ monitor_task:
 #    RELEASE: ENCRYPTED[xxx]
 #    GITHUB_TOKEN: ENCRYPTED[xxx]
 
-  # 1. 缓存 node_modules (改用 key 避免 cat 报错)
-  node_modules_cache:
-    folder: node_modules
-    fingerprint_key: v1-node-deps
+  # 统一缓存到当前目录下的 .cache 和 node_modules
+  all_cache:
+    folders:
+      - .cache
+      - node_modules
+      - release_tracking_cache
+      - resource_cache
+    fingerprint_key: v2-all-cache
     reupload_on_changes: true
 
-  # 2. 缓存浏览器和字体
-  puppeteer_fonts_cache:
-    folders:
-      - ~/.cache/puppeteer
-      - ~/.local/share/fonts
-      - release_tracking_cache
-    fingerprint_key: v1-puppeteer-fonts
-
-  # 3. 运行资源缓存
-  resource_cache:
-    folder: resource_cache
-    fingerprint_key: res-${CIRRUS_BUILD_ID}
-
-  install_script:
-    - mkdir -p ~/.local/share/fonts
-    # 安装中文字体
+  setup_script:
+    # 准备字体目录并建立软链接
+    - mkdir -p .cache/fonts ~/.local/share
+    - ln -sf $CIRRUS_WORKING_DIR/.cache/fonts ~/.local/share/fonts
+    # 安装字体和依赖
     - apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
     - fc-cache -fv
-    # 安装依赖
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
