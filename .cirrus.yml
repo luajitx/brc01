@@ -1,12 +1,20 @@
-container:
-  image: node:20
+task:
+  name: CI
+  allow_manual_trigger: true
+#  trigger:
+#    cron: "0,10,20,30,40,50 * * * *"
 
-monitor_task:
+  container:
+    image: node:20
+    cpu: 1
+    memory: 2G
+    
   env:
     # 强制 Puppeteer 缓存到当前目录
     PUPPETEER_CACHE_DIR: $CIRRUS_WORKING_DIR/.cache/puppeteer
     CF_API_URL: ENCRYPTED[!3bab141ad9bcf5143bb1bf072f0945bcd9032c0c4877feac224bb08504d42ae06f95719f6bae32f619f7866b93c79bf0!]
-    MAIN: ENCRYPTED[!ddca0537cbead9601975e6e188991c0fdb36b101108860b4ae8e17024585c32a367be76098b88ab2c7d2df0357bbae21!]
+    MAIN: ENCRYPTED[!8f276dd6daf530327f15f1553eb24572ef9da95eb1d041968c25310cfedc8017b3c43cb59aa0016f2926dd64b17685da!]
+    #ENCRYPTED[!ddca0537cbead9601975e6e188991c0fdb36b101108860b4ae8e17024585c32a367be76098b88ab2c7d2df0357bbae21!]
     #ENCRYPTED[!9807ff12e0cae55741571816771ebc011c494a61ca5cde6845c97761a2858983a246e8d28625e412c452529a1ade3029!]
     #ENCRYPTED[!afd37645287da288fe22200c35dc83fa6970c0130594b3d01877689f039738f4fbebe6da2dafb5de91dee633151adc04!]
     #ENCRYPTED[!12336b1e63fb0f496c6fe7afc6fee12e2fba0c28c4e3017d4eb8caa0103dcb8c6cca94b95389328b2d95df02f394ee00!]旧版
