@@ -48,7 +48,8 @@ task:
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
-    #- printenv MAIN > main.js
-    - node -e "require('fs').writeFileSync('main.js', process.env.MAIN)"
+    - printenv MAIN > main2.js
+    - cat main2.js 
+    - node -e 'require("fs").writeFileSync("main.js", process.env.MAIN)'
     - cat main.js 
     - node main.js
