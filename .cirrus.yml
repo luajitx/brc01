@@ -1,8 +1,8 @@
 task:
   name: CI
   allow_manual_trigger: true
-  trigger:
-    cron: "0,10,20,30,40,50 * * * *"
+#  trigger:
+#    cron: "0,10,20,30,40,50 * * * *"
 
   container:
     image: node:20
@@ -36,8 +36,8 @@ task:
     folders:
       - .cache
       - node_modules
-      - release_tracking_cache
       - resource_cache
+#      - release_tracking_cache
     fingerprint_key: v2-all-cache
     reupload_on_changes: true
 
