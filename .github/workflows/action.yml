@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  schedule:
+    - cron: '0,10,20,30,40,50 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 缓存程序
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.cache/puppeteer
+            ~/.local/share/fonts
+            release_tracking_cache
+          key: ${{ runner.os }}-puppeteer-fonts-v6-${{ hashFiles('package.json') }}
+          restore-keys: ${{ runner.os }}-puppeteer-fonts-v6-
+
+      - name: 缓存资源
+        uses: actions/cache@v4
+        with:
+          path: resource_cache
+          key: ${{ runner.os }}-resource-cache-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-resource-cache-
+
+      - name: 安装Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装字体
+        run: |
+          mkdir -p ~/.local/share/fonts
+          if [ ! -f ~/.local/share/fonts/wqy-microhei.ttc ]; then
+              echo "Downloading WQY fonts into cache..."
+              sudo apt-get update -qq && sudo apt-get install -y fonts-wqy-microhei fonts-noto-cjk
+              cp -r /usr/share/fonts/truetype/wqy/* ~/.local/share/fonts/ 2>/dev/null || true
+              cp -r /usr/share/fonts/opentype/noto/* ~/.local/share/fonts/ 2>/dev/null || true
+          fi
+          sudo fc-cache -fv
+
+      - name: 运行
+        env:
+          CF_API_URL: ${{ secrets.CF_API_URL }}
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          NODE_NAME: ${{ secrets.NODE_NAME }}
+          MAIN: ${{ secrets.MAIN }}
+          RELEASE: ${{ secrets.RELEASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
+          printenv MAIN > main.js
+          node main.js
+          if [ -n "$RELEASE" ]; then
+            printenv RELEASE > release.js
+            node release.js
+          fi

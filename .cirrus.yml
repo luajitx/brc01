@@ -1,0 +1,92 @@
+# Cirrus CI配置文件，对应原GitHub Actions的CI逻辑
+name: CI
+
+# 定时任务配置（与原cron表达式一致，每10分钟触发一次）
+#schedule:
+#  cron: "0,10,20,30,40,50 * * * *"
+
+# 启用手动触发（对应原workflow_dispatch）
+manual_trigger: true
+
+# 定义任务（对应原jobs）
+monitor_task:
+  # 使用Ubuntu最新版容器（对应原ubuntu-latest）
+  container:
+    image: ubuntu:latest
+    # 可选：增加资源限制（Cirrus免费版默认足够）
+    cpu: 1
+    memory: 2G
+
+  # 权限配置：Cirrus的权限需在项目设置中提前配置
+  # 注：写入代码库的权限需要在Cirrus项目设置里启用 "Write access to repository"
+
+  # 缓存配置（对应原actions/cache）
+  # 缓存1：程序相关缓存（长期缓存）
+  node_deps_cache:
+    folder: node_modules
+    fingerprint_script: cat package.json
+    populate_script: npm install
+
+  puppeteer_cache:
+    folder: ~/.cache/puppeteer
+    populate_script: mkdir -p ~/.cache/puppeteer
+
+  fonts_cache:
+    folder: ~/.local/share/fonts
+    populate_script: mkdir -p ~/.local/share/fonts
+
+  release_cache:
+    folder: release_tracking_cache
+    fingerprint_script: cat package.json
+
+  # 缓存2：资源缓存（按运行ID区分，短期缓存）
+  resource_cache:
+    folder: resource_cache
+    # Cirrus不支持按运行ID作为缓存key，改用时间戳近似实现
+    fingerprint_script: date +%Y%m%d%H%M
+
+  # 安装系统依赖（字体相关）
+  apt_packages:
+    - fonts-wqy-microhei
+    - fonts-noto-cjk
+    - fontconfig
+    - curl
+    - gnupg
+
+  # 安装Node.js 20
+  install_node_script:
+    - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    - apt-get install -y nodejs
+    - node --version
+    - npm --version
+
+  # 安装字体（补充缓存逻辑）
+  install_fonts_script:
+    - if [ ! -f ~/.local/share/fonts/wqy-microhei.ttc ]; then
+        cp -r /usr/share/fonts/truetype/wqy/* ~/.local/share/fonts/ 2>/dev/null || true;
+        cp -r /usr/share/fonts/opentype/noto/* ~/.local/share/fonts/ 2>/dev/null || true;
+      fi
+    - fc-cache -fv
+
+  # 运行核心脚本（对应原run步骤）
+  run_script:
+    # 安装Node依赖
+    - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
+    # 写入并运行main.js
+    - echo "$MAIN" > main.js
+    - node main.js
+    # 可选运行release.js
+    #- if [ -n "$RELEASE" ]; then
+    #    echo "$RELEASE" > release.js;
+    #    node release.js;
+    #  fi
+
+  # 环境变量配置（需要在Cirrus项目设置中添加这些secrets）
+  env:
+    CF_API_URL: "${CF_API_URL}"
+    CF_API_KEY: "${CF_API_KEY}"
+    NODE_NAME: "${NODE_NAME}"
+    MAIN: "${MAIN}"
+    RELEASE: "${RELEASE}"
+    # Cirrus中GITHUB_TOKEN需要手动在项目设置中添加，命名为GITHUB_TOKEN
+    #GITHUB_TOKEN: "${GITHUB_TOKEN}"
