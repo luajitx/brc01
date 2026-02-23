@@ -11,8 +11,8 @@ task:
     # 关键修正：切换至 CircleCI 官方 Node+Chrome 镜像
     # 优势：预装 Chrome/Node，包含 sudo，权限配置完善，安全可靠
     image: cimg/node:20-browsers
-    cpu: 2
-    memory: 4G
+    cpu: 1
+    memory: 2G
     
   env:
     PUPPETEER_CACHE_DIR: $CIRRUS_WORKING_DIR/.cache/puppeteer
