@@ -8,8 +8,9 @@ task:
     #image: node:20
     #cpu: 1
     #memory: 2G
-    image: ghcr.io/puppeteer/puppeteer:latest
-    docker_arguments: { user: root }
+    # 关键修正：切换至 CircleCI 官方 Node+Chrome 镜像
+    # 优势：预装 Chrome/Node，包含 sudo，权限配置完善，安全可靠
+    image: cimg/node:20-browsers
     cpu: 2
     memory: 4G
     
@@ -30,37 +31,32 @@ task:
       - resource_cache
 #      - release_tracking_cache
     #fingerprint_key: v2-all-cache
-    fingerprint_key: v5-puppeteer-root-cache
+    fingerprint_key: v6-cimg-cache
     reupload_on_changes: true
 
   setup_script:
-    #ln: failed to create symbolic link '/usr/bin/google-chrome': Permission denied
-    - ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome
+    # 1. 路径修复：该镜像有 sudo 权限，可成功创建软链接
+    # 该镜像 Chrome 位于 /opt/google/chrome/google-chrome，需链接为代码预期的 /usr/bin/google-chrome
+    - sudo ln -sf /opt/google/chrome/google-chrome /usr/bin/google-chrome
     - mkdir -p .cache/fonts
     - |
       if [ ! -f ".cache/fonts/.fonts_installed" ]; then
         echo ">>> 首次运行，安装字体..."
-        # root 用户直接执行 apt-get，无需 sudo
-        apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
-        
-        # 复制字体到缓存目录
+        sudo apt-get update -qq && sudo apt-get install -y fonts-wqy-microhei fonts-noto-cjk
         cp -r /usr/share/fonts/truetype/wqy/* .cache/fonts/ 2>/dev/null || true
         cp -r /usr/share/fonts/opentype/noto/* .cache/fonts/ 2>/dev/null || true
         touch .cache/fonts/.fonts_installed
       else
         echo ">>> 利用缓存恢复字体..."
-        # 恢复字体到系统目录
-        mkdir -p /usr/share/fonts/truetype/wqy
-        mkdir -p /usr/share/fonts/opentype/noto
-        cp .cache/fonts/* /usr/share/fonts/truetype/wqy/ 2>/dev/null || true
-        fc-cache -fv
+        sudo mkdir -p /usr/share/fonts/truetype/wqy
+        sudo cp .cache/fonts/* /usr/share/fonts/truetype/wqy/ 2>/dev/null || true
+        sudo fc-cache -fv
       fi
     #检测到字体缓存缺失，开始安装...
     #E: Could not open lock file /var/lib/apt/lists/lock - open (13: Permission denied)
     #E: Unable to lock directory /var/lib/apt/lists/
  
   install_script:
-    # 安装依赖，利用缓存后此步骤仅在 package 变化或缓存丢失时执行
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
