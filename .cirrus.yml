@@ -53,13 +53,18 @@ task:
         # 刷新字体缓存
         fc-cache -fv
       fi
-      
+    #检测到字体缓存缺失，开始安装...
+    #E: Could not open lock file /var/lib/apt/lists/lock - open (13: Permission denied)
+    #E: Unable to lock directory /var/lib/apt/lists/
+ 
   install_script:
     # 安装依赖，利用缓存后此步骤仅在 package 变化或缓存丢失时执行
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
     - mkdir -p resource_cache
+    - find . -name google-chrome
+    - find . -name google-chrome-stable
     #- printenv MAIN > main2.js
     #- cat main2.js 
     #- node -e 'require("fs").writeFileSync("main.js", process.env.MAIN)'
