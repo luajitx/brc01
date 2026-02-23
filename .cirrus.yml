@@ -9,6 +9,7 @@ task:
     #cpu: 1
     #memory: 2G
     image: ghcr.io/puppeteer/puppeteer:latest
+    docker_arguments: { user: root }
     cpu: 2
     memory: 4G
     
@@ -29,30 +30,30 @@ task:
       - resource_cache
 #      - release_tracking_cache
     #fingerprint_key: v2-all-cache
-    fingerprint_key: v4-puppeteer-cache
+    fingerprint_key: v5-puppeteer-root-cache
     reupload_on_changes: true
 
   setup_script:
     #ln: failed to create symbolic link '/usr/bin/google-chrome': Permission denied
-    - sudo ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome
+    - ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome
     - mkdir -p .cache/fonts
     - |
       if [ ! -f ".cache/fonts/.fonts_installed" ]; then
-        echo ">>> 首次运行或缓存失效，安装字体..."
-        # 使用 sudo 安装系统字体
-        sudo apt-get update -qq && sudo apt-get install -y fonts-wqy-microhei fonts-noto-cjk
+        echo ">>> 首次运行，安装字体..."
+        # root 用户直接执行 apt-get，无需 sudo
+        apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
         
-        # 复制字体到缓存目录（当前用户有权限）
+        # 复制字体到缓存目录
         cp -r /usr/share/fonts/truetype/wqy/* .cache/fonts/ 2>/dev/null || true
         cp -r /usr/share/fonts/opentype/noto/* .cache/fonts/ 2>/dev/null || true
         touch .cache/fonts/.fonts_installed
       else
-        echo ">>> 检测到字体缓存，恢复字体..."
-        # 恢复字体到系统目录（需要 sudo 权限）
-        sudo mkdir -p /usr/share/fonts/truetype/wqy
-        sudo mkdir -p /usr/share/fonts/opentype/noto
-        sudo cp .cache/fonts/* /usr/share/fonts/truetype/wqy/ 2>/dev/null || true
-        sudo fc-cache -fv
+        echo ">>> 利用缓存恢复字体..."
+        # 恢复字体到系统目录
+        mkdir -p /usr/share/fonts/truetype/wqy
+        mkdir -p /usr/share/fonts/opentype/noto
+        cp .cache/fonts/* /usr/share/fonts/truetype/wqy/ 2>/dev/null || true
+        fc-cache -fv
       fi
     #检测到字体缓存缺失，开始安装...
     #E: Could not open lock file /var/lib/apt/lists/lock - open (13: Permission denied)
