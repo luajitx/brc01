@@ -5,27 +5,17 @@ task:
 #    cron: "0,10,20,30,40,50 * * * *"
 
   container:
-    image: node:20
-    cpu: 1
-    memory: 2G
+    #image: node:20
+    #cpu: 1
+    #memory: 2G
+    image: ghcr.io/puppeteer/puppeteer:latest
+    cpu: 2
+    memory: 4G
     
   env:
-    # 强制 Puppeteer 缓存到当前目录
     PUPPETEER_CACHE_DIR: $CIRRUS_WORKING_DIR/.cache/puppeteer
     CF_API_URL: "ENCRYPTED[1f275076ca9517c74bb796d31b213a919f4872c0d13495c7bf3282882b0c0231b155dc464fdf55a062c1b2a8dea276d8]"
-    #ENCRYPTED[!3bab141ad9bcf5143bb1bf072f0945bcd9032c0c4877feac224bb08504d42ae06f95719f6bae32f619f7866b93c79bf0!]
     MAIN: "ENCRYPTED[0754a2039228f49879374e6a2822d154afdd98cd355079e43519072d79e78a5c36f8e8c255ed700ed2b5d8061d8745df]"
-    #"ENCRYPTED[0754a2039228f49879374e6a2822d154afdd98cd355079e43519072d79e78a5c36f8e8c255ed700ed2b5d8061d8745df]" #base64
-    #"ENCRYPTED[08f9bd7be7b1011913dedfdd3bd56e8ee7a6558a2acf0fae4af12eba3ae7fb36aafc2bbd9d33b059f6958dd3c2ad3df0]"
-    #"ENCRYPTED[e0b88d769b5b7780a74510f7db23e569c94e53940aaa584e5224117c81be53c8f85235a7741342f587446bcead44bd32]"
-    #"ENCRYPTED[3a92dc7bc874a083f289e69373f0ab110e692d5f8b9bf4fc7197b1028906e7d20647f94e79c7c0bac3833f45c9f322d5]"
-    #"ENCRYPTED[6eb082298c150290e3465967f30cff7d596a7f3354379f817e5d27341d5e97d5d861d6ee38612c43fd74e96becdd2d7d]"
-    #ENCRYPTED[53fcf9039bf3926e9aad02eda0026a9a553a480fbe5c989dc86d917daeb4d1ab0056917357539d68d67c30ce9c968ecf]
-    #ENCRYPTED[!8f276dd6daf530327f15f1553eb24572ef9da95eb1d041968c25310cfedc8017b3c43cb59aa0016f2926dd64b17685da!]
-    #ENCRYPTED[!ddca0537cbead9601975e6e188991c0fdb36b101108860b4ae8e17024585c32a367be76098b88ab2c7d2df0357bbae21!]
-    #ENCRYPTED[!9807ff12e0cae55741571816771ebc011c494a61ca5cde6845c97761a2858983a246e8d28625e412c452529a1ade3029!]
-    #ENCRYPTED[!afd37645287da288fe22200c35dc83fa6970c0130594b3d01877689f039738f4fbebe6da2dafb5de91dee633151adc04!]
-    #ENCRYPTED[!12336b1e63fb0f496c6fe7afc6fee12e2fba0c28c4e3017d4eb8caa0103dcb8c6cca94b95389328b2d95df02f394ee00!]旧版
 #    RELEASE: ENCRYPTED[xxx]
 #    GITHUB_TOKEN: ENCRYPTED[xxx]
 #    CF_API_KEY: ENCRYPTED[xxx]
@@ -36,20 +26,39 @@ task:
     folders:
       - .cache
       - node_modules
-#      - resource_cache
+      - resource_cache
 #      - release_tracking_cache
-    fingerprint_key: v2-all-cache
+    #fingerprint_key: v2-all-cache
+    fingerprint_key: v3-puppeteer-cache
     reupload_on_changes: true
 
   setup_script:
-    # 准备字体目录并建立软链接
-    - mkdir -p .cache/fonts ~/.local/share
-    - ln -sf $CIRRUS_WORKING_DIR/.cache/fonts ~/.local/share/fonts
-    - apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
-    - fc-cache -fv
+    - ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome
+    - mkdir -p .cache/fonts
+    - |
+      if [ ! -f ".cache/fonts/.fonts_installed" ]; then
+        echo "检测到字体缓存缺失，开始安装..."
+        apt-get update -qq && apt-get install -y fonts-wqy-microhei fonts-noto-cjk
+        # 将安装的字体复制到缓存目录以便下次使用
+        cp -r /usr/share/fonts/truetype/wqy/* .cache/fonts/ 2>/dev/null || true
+        cp -r /usr/share/fonts/opentype/noto/* .cache/fonts/ 2>/dev/null || true
+        touch .cache/fonts/.fonts_installed
+      else
+        echo "利用缓存字体..."
+        # 将缓存的字体链接回系统字体目录（或直接使用 fc-cache 扫描缓存目录）
+        mkdir -p /usr/share/fonts/truetype/wqy
+        mkdir -p /usr/share/fonts/opentype/noto
+        cp .cache/fonts/* /usr/share/fonts/truetype/wqy/ 2>/dev/null || true
+        # 刷新字体缓存
+        fc-cache -fv
+      fi
+      
+  install_script:
+    # 安装依赖，利用缓存后此步骤仅在 package 变化或缓存丢失时执行
     - npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
 
   run_script:
+    - mkdir -p resource_cache
     #- printenv MAIN > main2.js
     #- cat main2.js 
     #- node -e 'require("fs").writeFileSync("main.js", process.env.MAIN)'
