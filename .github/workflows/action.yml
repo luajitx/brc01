@@ -1,8 +1,8 @@
 name: CI
 
 on:
-  schedule:
-    - cron: '0 * * * *'
+#  schedule:
+#    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -62,7 +62,7 @@ jobs:
           npm install puppeteer-core puppeteer-extra puppeteer-extra-plugin-adblocker croner @octokit/rest axios fs-extra
           printenv MAIN > main.js
           node main.js
-          if [ -n "$RELEASE" ]; then
-            printenv RELEASE > release.js
-            node release.js
-          fi
+#          if [ -n "$RELEASE" ]; then
+#            printenv RELEASE > release.js
+#            node release.js
+#          fi
